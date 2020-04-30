@@ -48,6 +48,12 @@ class OurSender(Sender):
 
     def send(self, data):
             self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
+
+            slicedData = self.slice_frames(data)
+            print slicedData
+            checkedData = self.checksum(slicedData)
+            print checkedData
+
             while True:
                 try:
                     self.simulator.u_send(data)  # send data
@@ -58,12 +64,40 @@ class OurSender(Sender):
                 except socket.timeout:
                     pass
 
-    def splitData(data):
+    def slice_frames(self, data):
+        """
+        Slice input into BUFFER_SIZE frames
+        :param data_bytes: input bytes
+        :return: list of frames of size BUFFER_SIZE
+        """
+        frames = list()
+        num_bytes = len(data)
+        extra = 1 if num_bytes % 1024 else 0
+
+        for i in xrange(num_bytes / 1024 + extra):
+            # split data into 1024 byte frames
+            frames.append(
+                data[
+                    i * 1024:
+                    i * 1024+ 1024
+                ]
+            )
+        return frames
+
+    def checksum(self, data):
+         checksum = 0
+         data = bytearray(data)
+         for i in xrange(len(data)):
+            checksum += data[i]
+         print checksum
+         return checksum
+
 
 
 
 if __name__ == "__main__":
     # test out BogoSender
     DATA = bytearray(sys.stdin.read())
-    sndr = BogoSender()
+    #sndr = BogoSender()
+    sndr = OurSender()
     sndr.send(DATA)

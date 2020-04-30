@@ -40,6 +40,26 @@ class BogoSender(Sender):
             except socket.timeout:
                 pass
 
+class OurSender(Sender):
+
+    def __init__(self):
+        super(OurSender, self).__init__()
+
+
+    def send(self, data):
+            self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
+            while True:
+                try:
+                    self.simulator.u_send(data)  # send data
+                    ack = self.simulator.u_receive()  # receive ACK
+                    self.logger.info("Got ACK from socket: {}".format(
+                        ack.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
+                    break
+                except socket.timeout:
+                    pass
+
+    def splitData(data):
+
 
 
 if __name__ == "__main__":

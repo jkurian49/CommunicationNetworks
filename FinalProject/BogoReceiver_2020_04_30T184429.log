@@ -1,1 +1,3 @@
 INFO:root:Receiving on port: 50005 and replying with ACK on port: 50006
+INFO:root:Got data from socket: DATA
+

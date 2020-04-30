@@ -50,9 +50,9 @@ class OurSender(Sender):
             self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
 
             slicedData = self.slice_frames(data)
-            print slicedData
-            checkedData = self.checksum(slicedData)
-            print checkedData
+            checkedData = []
+            for i in range(len(slicedData)):
+                checkedData.append(self.checksum(slicedData[i]))
 
             while True:
                 try:
@@ -84,12 +84,12 @@ class OurSender(Sender):
             )
         return frames
 
-    def checksum(self, data):
+    def checksum(self, data_array):
          checksum = 0
-         data = bytearray(data)
-         for i in xrange(len(data)):
-            checksum += data[i]
-         print checksum
+         for i in xrange(len(data_array)):
+            checksum += data_array[i]
+
+         print "checksum: " + str(checksum)
          return checksum
 
 

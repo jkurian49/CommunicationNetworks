@@ -45,24 +45,36 @@ class OurSender(Sender):
     def __init__(self):
         super(OurSender, self).__init__()
 
-
     def send(self, data):
             self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
 
             slicedData = self.slice_frames(data)
-            checkedData = []
-            for i in range(len(slicedData)):
-                checkedData.append(self.checksum(slicedData[i]))
+            segments  = []
 
-            while True:
-                try:
-                    self.simulator.u_send(data)  # send data
-                    ack = self.simulator.u_receive()  # receive ACK
-                    self.logger.info("Got ACK from socket: {}".format(
-                        ack.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
-                    break
-                except socket.timeout:
-                    pass
+            for i in range(len(slicedData)):
+                #checkedData.append(self.checksum(slicedData[i]))
+                seg = Segment(slicedData[i], 0, 0, 0)
+                seg.checksum = Segment.checksum(seg,slicedData[i])
+                segments.append(seg)
+                #print "Checksum for Segment " + str(i) + ": " + str(seg.checksum)
+                #print "Length of Segment " + str(i) + ": " + str(len(seg.data))
+                finalData = bytearray(seg.checksum)
+                finalData += bytearray(seg.data)
+
+
+
+                while True:
+                    try:
+                        self.simulator.u_send(data)  # send data
+                        ack = self.simulator.u_receive()  # receive ACK
+                        self.logger.info("Got ACK from socket: {}".format(
+                            ack.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
+                        break
+                    except socket.timeout:
+                        pass
+            print finalData[0]
+            print bytearray(seg.checksum)
+
 
     def slice_frames(self, data):
         """
@@ -72,26 +84,32 @@ class OurSender(Sender):
         """
         frames = list()
         num_bytes = len(data)
-        extra = 1 if num_bytes % 1024 else 0
+        extra = 1 if num_bytes % 1012 else 0
 
-        for i in xrange(num_bytes / 1024 + extra):
+        for i in xrange(num_bytes / 1012 + extra):
             # split data into 1024 byte frames
             frames.append(
                 data[
-                    i * 1024:
-                    i * 1024+ 1024
+                    i * 1012:
+                    i * 1012+ 1012
                 ]
             )
         return frames
 
-    def checksum(self, data_array):
-         checksum = 0
-         for i in xrange(len(data_array)):
-            checksum += data_array[i]
+class Segment(object):
+        def __init__(self, data = [],checksum = 0,seqnum = 0,acknum = 0):
+            self.data = data
+            self.checksum = checksum
+            self.seqnum = seqnum
+            self.acknum = acknum
 
-         print "checksum: " + str(checksum)
-         return checksum
+        def checksum(self, data_array):
+             checksum_val = 0
+             for i in xrange(len(data_array)):
+                checksum_val += data_array[i]
 
+             checksum_val = 255
+             return checksum_val
 
 
 

@@ -50,18 +50,16 @@ class OurSender(Sender):
 
             slicedData = self.slice_frames(data)
             segments  = []
-
             for i in range(len(slicedData)):
+                finalData = bytearray()
+
                 #checkedData.append(self.checksum(slicedData[i]))
                 seg = Segment(slicedData[i], 0, 0, 0)
                 seg.checksum = Segment.checksum(seg,slicedData[i])
-                segments.append(seg)
                 #print "Checksum for Segment " + str(i) + ": " + str(seg.checksum)
                 #print "Length of Segment " + str(i) + ": " + str(len(seg.data))
-                finalData = bytearray(seg.checksum)
-                finalData += bytearray(seg.data)
-
-
+                finalData.extend(bytearray(seg.checksum))
+                finalData.extend(bytearray(seg.data))
 
                 while True:
                     try:
@@ -72,8 +70,9 @@ class OurSender(Sender):
                         break
                     except socket.timeout:
                         pass
-            print finalData[0]
-            print bytearray(seg.checksum)
+
+            #print finalData
+            #print bytearray(seg.checksum)
 
 
     def slice_frames(self, data):
@@ -105,11 +104,10 @@ class Segment(object):
 
         def checksum(self, data_array):
              checksum_val = 0
-             for i in xrange(len(data_array)):
+             for i in xrange(len(data_array)): # i dont think we need for loop here anymore
                 checksum_val += data_array[i]
-
-             checksum_val = 255
-             return checksum_val
+             checksum_arr = [int(x) for x in str(checksum_val)]
+             return bytearray(checksum_arr)
 
 
 

@@ -53,26 +53,25 @@ class OurSender(Sender):
             for i in range(len(slicedData)):
                 finalData = bytearray()
 
-                #checkedData.append(self.checksum(slicedData[i]))
                 seg = Segment(slicedData[i], 0, 0, 0)
                 seg.checksum = Segment.checksum(seg,slicedData[i])
-                #print "Checksum for Segment " + str(i) + ": " + str(seg.checksum)
-                #print "Length of Segment " + str(i) + ": " + str(len(seg.data))
-                finalData.extend(bytearray(seg.checksum))
-                finalData.extend(bytearray(seg.data))
-
+                finalData.extend(bytes(seg.checksum)) # problem is that checksum is not being added on in python 2. final data is only the data
+                finalData.extend(seg.data)
+                # send first packet, then send based on current ack
                 while True:
                     try:
-                        self.simulator.u_send(data)  # send data
+                        self.simulator.u_send(finalData)  # send data
                         ack = self.simulator.u_receive()  # receive ACK
                         self.logger.info("Got ACK from socket: {}".format(
                             ack.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
+                        #if ack.decode('ascii') == '123':
+                            # send next: format next segment
+                            # set ack
+                            # set seq num
                         break
                     except socket.timeout:
+                        # resend packet based on ack
                         pass
-
-            #print finalData
-            #print bytearray(seg.checksum)
 
 
     def slice_frames(self, data):
@@ -103,17 +102,20 @@ class Segment(object):
             self.acknum = acknum
 
         def checksum(self, data_array):
-             checksum_val = 0
-             for i in xrange(len(data_array)): # i dont think we need for loop here anymore
-                checksum_val += data_array[i]
-             checksum_arr = [int(x) for x in str(checksum_val)]
-             return bytearray(checksum_arr)
+             checksum_arr = bytearray()
+             N = 10 # number of bytes allocated for checksum
+             checksum_val = sum(bytearray(data_array))
+             ones = N - int(len(str(checksum_val)))
+             checksum_arr.extend(bytes(checksum_val))
+             for i in range(ones):
+                checksum_arr.extend(bytes(1))
+             return checksum_arr
 
 
 
 if __name__ == "__main__":
     # test out BogoSender
-    DATA = bytearray(sys.stdin.read())
+    DATA = bytes(sys.stdin.read())
     #sndr = BogoSender()
     sndr = OurSender()
     sndr.send(DATA)

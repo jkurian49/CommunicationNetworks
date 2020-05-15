@@ -1,6 +1,7 @@
+SHELL := /bin/bash
+
 INPUT ?= ./file_1MB.txt
 OUTPUT ?= ./output.txt
-
 
 test:
 	python2 receiver.py > $(OUTPUT) & time python2 sender.py < $(INPUT) &

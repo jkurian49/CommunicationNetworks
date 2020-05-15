@@ -9,7 +9,7 @@ import sys
 
 class Sender(object):
 
-    def __init__(self, inbound_port=50006, outbound_port=50005, timeout=10, debug_level=logging.INFO):
+    def __init__(self, inbound_port=50006, outbound_port=50005, timeout=2, debug_level=logging.INFO):
         self.logger = utils.Logger(self.__class__.__name__, debug_level)
 
         self.inbound_port = inbound_port
@@ -32,12 +32,14 @@ class BogoSender(Sender):
         self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
         while True:
             try:
+                print('trying')
                 self.simulator.u_send(data)  # send data
                 ack = self.simulator.u_receive()  # receive ACK
                 self.logger.info("Got ACK from socket: {}".format(
                     ack.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
                 break
             except socket.timeout:
+                print('sndr timeout')
                 pass
 
 class OurSender(Sender):
@@ -46,16 +48,21 @@ class OurSender(Sender):
         super(OurSender, self).__init__()
 
     def send(self, data):
+            curr_ack = 0
+            curr_data = 0
             self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
 
             slicedData = self.slice_frames(data)
             segments  = []
-            for i in range(len(slicedData)):
+            while curr_data < len(slicedData):
                 finalData = bytearray()
 
-                seg = Segment(slicedData[i], 0, 0, 0)
-                seg.checksum = Segment.checksum(seg,slicedData[i])
+                seg = Segment(slicedData[curr_data], 0, curr_ack)
+                seg.checksum = Segment.checksum(seg,slicedData[curr_data])
                 finalData.extend(bytes(seg.checksum)) # problem is that checksum is not being added on in python 2. final data is only the data
+                if curr_ack < 10:
+                    finalData.extend(bytes(0))
+                finalData.extend(bytes(curr_ack))
                 finalData.extend(seg.data)
                 # send first packet, then send based on current ack
                 while True:
@@ -64,10 +71,14 @@ class OurSender(Sender):
                         ack = self.simulator.u_receive()  # receive ACK
                         self.logger.info("Got ACK from socket: {}".format(
                             ack.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
-                        #if ack.decode('ascii') == '123':
+
+                        if ack.decode('ascii') == str(curr_ack):
+                            curr_ack += 1
+                            curr_data += 1
                             # send next: format next segment
                             # set ack
                             # set seq num
+
                         break
                     except socket.timeout:
                         # resend packet based on ack
@@ -95,11 +106,10 @@ class OurSender(Sender):
         return frames
 
 class Segment(object):
-        def __init__(self, data = [],checksum = 0,seqnum = 0,acknum = 0):
+        def __init__(self, data = [],checksum = 0,seqnum = 0):
             self.data = data
             self.checksum = checksum
             self.seqnum = seqnum
-            self.acknum = acknum
 
         def checksum(self, data_array):
              checksum_arr = bytearray()

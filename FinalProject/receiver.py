@@ -9,7 +9,7 @@ import socket
 
 class Receiver(object):
 
-    def __init__(self, inbound_port=50005, outbound_port=50006, timeout=10, debug_level=logging.INFO):
+    def __init__(self, inbound_port=50005, outbound_port=50006, timeout=2, debug_level=logging.INFO):
         self.logger = utils.Logger(self.__class__.__name__, debug_level)
 
         self.inbound_port = inbound_port
@@ -41,7 +41,7 @@ class BogoReceiver(Receiver):
                 sys.exit()
 
 class OurReceiver(Receiver):
-    ACK_DATA = bytes(123)
+    ACK_DATA = bytes(0)
     ACK_NEG = bytes(456)
 
     def __init__(self):
@@ -54,16 +54,19 @@ class OurReceiver(Receiver):
             try:
                  data = self.simulator.u_receive() # receive data
                  checksum_sndr = data[:N]
-                 data_sndr = data[N:]
+                 seq_sndr = data[N:2]
+                 data_sndr = data[N+2:]
                  checksum_rcvr = bytes(OurReceiver.checksum(self, data_sndr))
                  if checksum_sndr == checksum_rcvr:
                     self.logger.info("Got data from socket: {}".format(data_sndr.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
                     sys.stdout.write(data_sndr)
-                    self.simulator.u_send(bytearray(OurReceiver.ACK_DATA))  # send ACK
+                    self.simulator.u_send(bytearray(seq_sndr))  # send ACK
                  else:
+                    seq_resndr = seq_sndr - 1
                     self.logger.info("incorrect data from socket: {}".format(data_sndr.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
-                    self.simulator.u_send(bytearray(OurReceiver.ACK_NEG))  # send ACK
+                    self.simulator.u_send(bytearray(seq_resndr))  # send ACK
             except socket.timeout:
+                print('rcvr timeout')
                 sys.exit()
 
     def checksum(self, data_array):
@@ -71,7 +74,6 @@ class OurReceiver(Receiver):
         N = 10 # number of bytes allocated for checksum
         checksum_val = sum(bytearray(data_array))
         ones = N - int(len(str(checksum_val)))
-        print(ones)
         checksum_arr.extend(bytes(checksum_val))
         for i in range(ones):
             checksum_arr.extend(bytes(1))

@@ -4,7 +4,7 @@ INPUT ?= ./file_1MB.txt
 OUTPUT ?= ./output.txt
 
 test:
-	python2 receiver.py > $(OUTPUT) & time python2 sender.py < $(INPUT) &
+	python2 -u receiver.py > $(OUTPUT) & time python2 -u sender.py < $(INPUT) > $(OUTPUT) &
 diff:
 	diff $(INPUT) $(OUTPUT)
 kill:

@@ -9,7 +9,7 @@ import sys
 
 class Sender(object):
 
-    def __init__(self, inbound_port=50006, outbound_port=50005, timeout=2, debug_level=logging.INFO):
+    def __init__(self, inbound_port=50006, outbound_port=50005, timeout=5, debug_level=logging.INFO):
         self.logger = utils.Logger(self.__class__.__name__, debug_level)
 
         self.inbound_port = inbound_port
@@ -32,17 +32,15 @@ class BogoSender(Sender):
         self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
         while True:
             try:
-                print('trying')
                 self.simulator.u_send(data)  # send data
                 ack = self.simulator.u_receive()  # receive ACK
                 self.logger.info("Got ACK from socket: {}".format(
                     ack.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
                 break
             except socket.timeout:
-                print('sndr timeout')
                 pass
 
-class OurSender(Sender):
+class OurSender(BogoSender) :
 
     def __init__(self):
         super(OurSender, self).__init__()
@@ -56,7 +54,6 @@ class OurSender(Sender):
             segments  = []
             while curr_data < len(slicedData):
                 finalData = bytearray()
-
                 seg = Segment(slicedData[curr_data], 0, curr_ack)
                 seg.checksum = Segment.checksum(seg,slicedData[curr_data])
                 finalData.extend(bytes(seg.checksum)) # problem is that checksum is not being added on in python 2. final data is only the data
@@ -71,8 +68,7 @@ class OurSender(Sender):
                         ack = self.simulator.u_receive()  # receive ACK
                         self.logger.info("Got ACK from socket: {}".format(
                             ack.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
-
-                        if ack.decode('ascii') == str(curr_ack):
+                        if ack == finalData[10:12]:
                             curr_ack += 1
                             curr_data += 1
                             # send next: format next segment
@@ -93,16 +89,18 @@ class OurSender(Sender):
         """
         frames = list()
         num_bytes = len(data)
+        print(data)
         extra = 1 if num_bytes % 1012 else 0
 
         for i in xrange(num_bytes / 1012 + extra):
-            # split data into 1024 byte frames
+            # split data into 1012 byte frames
             frames.append(
                 data[
                     i * 1012:
                     i * 1012+ 1012
                 ]
             )
+            #sys.stdout.write(frames[i])
         return frames
 
 class Segment(object):

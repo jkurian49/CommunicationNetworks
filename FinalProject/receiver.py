@@ -9,7 +9,7 @@ import socket
 
 class Receiver(object):
 
-    def __init__(self, inbound_port=50005, outbound_port=50006, timeout=2, debug_level=logging.INFO):
+    def __init__(self, inbound_port=50005, outbound_port=50006, timeout=5, debug_level=logging.INFO):
         self.logger = utils.Logger(self.__class__.__name__, debug_level)
 
         self.inbound_port = inbound_port
@@ -40,8 +40,8 @@ class BogoReceiver(Receiver):
             except socket.timeout:
                 sys.exit()
 
-class OurReceiver(Receiver):
-    ACK_DATA = bytes(0)
+class OurReceiver(BogoReceiver):
+    #ACK_DATA = bytes()
     ACK_NEG = bytes(456)
 
     def __init__(self):
@@ -54,20 +54,25 @@ class OurReceiver(Receiver):
             try:
                  data = self.simulator.u_receive() # receive data
                  checksum_sndr = data[:N]
-                 seq_sndr = data[N:2]
-                 data_sndr = data[N+2:]
+                 seq_sndr = data[N:12]
+                 ACK_DATA = bytes(seq_sndr)
+                 data_sndr = data[12:]
                  checksum_rcvr = bytes(OurReceiver.checksum(self, data_sndr))
                  if checksum_sndr == checksum_rcvr:
                     self.logger.info("Got data from socket: {}".format(data_sndr.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
-                    sys.stdout.write(data_sndr)
-                    self.simulator.u_send(bytearray(seq_sndr))  # send ACK
+                    #sys.stdout.write(data_sndr)
+                    self.simulator.u_send(ACK_DATA)  # send ACK
                  else:
-                    seq_resndr = seq_sndr - 1
+                    if (seq_sndr == 0):
+                        seq_sndr = 99
+                    #else:
+                        #seq_sndr = seq_sndr - 1
+                    ACK_NEG = bytes(seq_sndr)
                     self.logger.info("incorrect data from socket: {}".format(data_sndr.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
-                    self.simulator.u_send(bytearray(seq_resndr))  # send ACK
+                    self.simulator.u_send(ACK_NEG)  # send ACK
             except socket.timeout:
-                print('rcvr timeout')
-                sys.exit()
+                a = 1
+                #sys.exit()
 
     def checksum(self, data_array):
         checksum_arr = bytearray()

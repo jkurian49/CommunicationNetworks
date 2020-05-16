@@ -6,6 +6,7 @@ import channelsimulator
 import utils
 import sys
 import socket
+import hashlib
 
 class Receiver(object):
 
@@ -48,16 +49,18 @@ class OurReceiver(BogoReceiver):
         super(OurReceiver, self).__init__()
 
     def receive(self):
-        N = 10
+        N = 16
         self.logger.info("Receiving on port: {} and replying with ACK on port: {}".format(self.inbound_port, self.outbound_port))
         while True:
             try:
                  data = self.simulator.u_receive() # receive data
                  checksum_sndr = data[:N]
-                 seq_sndr = data[N:12]
+                 seq_sndr = data[N:N+2]
                  ACK_DATA = bytes(seq_sndr)
-                 data_sndr = data[12:]
+                 data_sndr = data[N+2:]
                  checksum_rcvr = bytes(OurReceiver.checksum(self, data_sndr))
+                 self.logger.info("Sender checksum: " + checksum_sndr)
+                 self.logger.info("Receiver checksum: " + checksum_rcvr)
                  if checksum_sndr == checksum_rcvr:
                     self.logger.info("Got data from socket: {}".format(data_sndr.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
                     #sys.stdout.write(data_sndr)
@@ -75,14 +78,17 @@ class OurReceiver(BogoReceiver):
                 #sys.exit()
 
     def checksum(self, data_array):
-        checksum_arr = bytearray()
-        N = 10 # number of bytes allocated for checksum
-        checksum_val = sum(bytearray(data_array))
-        ones = N - int(len(str(checksum_val)))
-        checksum_arr.extend(bytes(checksum_val))
-        for i in range(ones):
-            checksum_arr.extend(bytes(1))
-        return checksum_arr
+        # checksum_arr = bytearray()
+        # N = 10 # number of bytes allocated for checksum
+        # checksum_val = sum(bytearray(data_array))
+        # ones = N - int(len(str(checksum_val)))
+        # checksum_arr.extend(bytes(checksum_val))
+        # for i in range(ones):
+        #     checksum_arr.extend(bytes(1))
+        # return checksum_arr
+        checksum_val = hashlib.md5()
+        checksum_val.update(bytearray(data_array))
+        return checksum_val.digest()
 
 
 if __name__ == "__main__":

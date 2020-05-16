@@ -63,7 +63,7 @@ class OurReceiver(BogoReceiver):
                  self.logger.info("Receiver checksum: " + checksum_rcvr)
                  if checksum_sndr == checksum_rcvr:
                     self.logger.info("Got data from socket: {}".format(data_sndr.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
-                    #sys.stdout.write(data_sndr)
+                    sys.stdout.write(data_sndr)
                     self.simulator.u_send(ACK_DATA)  # send ACK
                  else:
                     if (seq_sndr == 0):
@@ -74,8 +74,7 @@ class OurReceiver(BogoReceiver):
                     self.logger.info("incorrect data from socket: {}".format(data_sndr.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
                     self.simulator.u_send(ACK_NEG)  # send ACK
             except socket.timeout:
-                a = 1
-                #sys.exit()
+                sys.exit()
 
     def checksum(self, data_array):
         # checksum_arr = bytearray()

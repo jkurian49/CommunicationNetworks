@@ -61,7 +61,7 @@ class OurSender(BogoSender):
             finalData = bytearray()
             seg = Segment(slicedData[curr_data], 0, curr_ack)
             seg.checksum = Segment.checksum(seg, slicedData[curr_data])
-            print("Sent checksum: " + seg.checksum)
+            sys.stdout.write("Sent checksum: " + seg.checksum)
             finalData.extend(
                 seg.checksum)  # problem is that checksum is not being added on in python 2. final data is only the data
             if curr_ack < 10:
@@ -75,7 +75,7 @@ class OurSender(BogoSender):
                     ack = self.simulator.u_receive()  # receive ACK
                     self.logger.info("Got ACK from socket: {}".format(
                         ack.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
-                    if ack == finalData[10:12]:
+                    if ack == finalData[16:18]:
                         curr_ack += 1
                         curr_data += 1
                         # send next: format next segment
@@ -127,6 +127,7 @@ class Segment(object):
         # return checksum_arr
         checksum_val = hashlib.md5()
         checksum_val.update(bytearray(data_array))
+        print (checksum_val.digest())
         return checksum_val.digest()
 
 

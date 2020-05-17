@@ -11,7 +11,7 @@ import hashlib
 
 class Sender(object):
 
-    def __init__(self, inbound_port=50006, outbound_port=50005, timeout=2, debug_level=logging.INFO):
+    def __init__(self, inbound_port=50006, outbound_port=50005, timeout=0.5, debug_level=logging.INFO):
         self.logger = utils.Logger(self.__class__.__name__, debug_level)
 
         self.inbound_port = inbound_port
@@ -61,26 +61,26 @@ class OurSender(BogoSender):
             finalData = bytearray()
             seg = Segment(slicedData[curr_data], 0, curr_ack)
             seg.checksum = Segment.checksum(seg, slicedData[curr_data])
-            finalData.extend(
-                seg.checksum)
+            finalData.extend(seg.checksum)
             if curr_ack < 10:
                 finalData.extend(bytes(0))
             finalData.extend(bytes(curr_ack))
             finalData.extend(seg.data)
-            # send first packet, then send based on current ack
             while True:
                 try:
+
                     self.simulator.u_send(finalData)  # send data
                     ack = self.simulator.u_receive()  # receive ACK
                     self.logger.info("Got ACK from socket: " + ack)  # note that ASCII will only decode bytes in the range 0-127g
+
                     if ack == finalData[16:18]:
+                        # makes sure sequence numbers don't excede 2 bytes
                         if curr_ack == 99:
                             curr_ack = 0
                         else:
                             curr_ack += 1
                         curr_data += 1
                         break
-
                 except socket.timeout:
                     pass
 
@@ -92,7 +92,6 @@ class OurSender(BogoSender):
         """
         frames = list()
         num_bytes = len(data)
-        #print(data)
         extra = 1 if num_bytes % 1006 else 0
 
         for i in xrange(num_bytes / 1006 + extra):
@@ -103,7 +102,6 @@ class OurSender(BogoSender):
                 i * 1006 + 1006
                 ]
             )
-            # sys.stdout.write(frames[i])
         return frames
 
 
@@ -116,13 +114,10 @@ class Segment(object):
     def checksum(self, data_array):
         checksum_val = hashlib.md5()
         checksum_val.update(bytearray(data_array))
-        #print (checksum_val.digest())
         return checksum_val.digest()
 
 
 if __name__ == "__main__":
-    # test out BogoSender
     DATA = bytes(sys.stdin.read())
-    # sndr = BogoSender()
     sndr = OurSender()
     sndr.send(DATA)

@@ -74,15 +74,15 @@ class OurSender(BogoSender):
                     self.simulator.u_send(finalData)  # send data
                     ack = self.simulator.u_receive()  # receive ACK
                     self.logger.info("Got ACK from socket: {}".format(
-                        ack.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
+                        ack.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127g
                     if ack == finalData[16:18]:
                         curr_ack += 1
                         curr_data += 1
                         # send next: format next segment
                         # set ack
                         # set seq num
+                        break
 
-                    break
                 except socket.timeout:
                     # resend packet based on ack
                     pass

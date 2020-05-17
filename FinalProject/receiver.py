@@ -1,4 +1,6 @@
 # Written by S. Mevawala, modified by D. Gitzel
+# Jason Kurian, Rebecca Gartenberg, Sophie Jaro
+# We implemented RDT 3.0 (checksum, timeout, sequence numbers, ACKS) and handled duplicate packets
 
 import logging
 
@@ -6,10 +8,11 @@ import channelsimulator
 import utils
 import sys
 import socket
+import hashlib
 
 class Receiver(object):
 
-    def __init__(self, inbound_port=50005, outbound_port=50006, timeout=5, debug_level=logging.INFO):
+    def __init__(self, inbound_port=50005, outbound_port=50006, timeout=0.5, debug_level=logging.INFO):
         self.logger = utils.Logger(self.__class__.__name__, debug_level)
 
         self.inbound_port = inbound_port
@@ -41,52 +44,46 @@ class BogoReceiver(Receiver):
                 sys.exit()
 
 class OurReceiver(BogoReceiver):
-    #ACK_DATA = bytes()
-    ACK_NEG = bytes(456)
 
     def __init__(self):
         super(OurReceiver, self).__init__()
 
     def receive(self):
-        N = 10
+        N = 16
+        prev_seq = 99
         self.logger.info("Receiving on port: {} and replying with ACK on port: {}".format(self.inbound_port, self.outbound_port))
         while True:
             try:
                  data = self.simulator.u_receive() # receive data
                  checksum_sndr = data[:N]
-                 seq_sndr = data[N:12]
-                 ACK_DATA = bytes(seq_sndr)
-                 data_sndr = data[12:]
+                 seq_sndr = data[N:N+2]
+                 ACK0 = bytearray("\x00\x00")
+                 # Handles duplicate packets
+                 if seq_sndr == ACK0 and prev_seq != ACK0:
+                    prev_seq = 99
+                 ACK_DATA = seq_sndr
+                 data_sndr = data[N+2:]
                  checksum_rcvr = bytes(OurReceiver.checksum(self, data_sndr))
                  if checksum_sndr == checksum_rcvr:
                     self.logger.info("Got data from socket: {}".format(data_sndr.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
-                    #sys.stdout.write(data_sndr)
+                    # Handles duplicate packets
+                    if seq_sndr != prev_seq:
+                        sys.stdout.write(data_sndr)
                     self.simulator.u_send(ACK_DATA)  # send ACK
+                    prev_seq = ACK_DATA
                  else:
-                    if (seq_sndr == 0):
-                        seq_sndr = 99
-                    #else:
-                        #seq_sndr = seq_sndr - 1
-                    ACK_NEG = bytes(seq_sndr)
-                    self.logger.info("incorrect data from socket: {}".format(data_sndr.decode('ascii')))  # note that ASCII will only decode bytes in the range 0-127
+                    ACK_NEG = bytes(123)
+                    self.logger.info("incorrect data")  # note that ASCII will only decode bytes in the range 0-127
                     self.simulator.u_send(ACK_NEG)  # send ACK
             except socket.timeout:
-                a = 1
-                #sys.exit()
+                pass
 
     def checksum(self, data_array):
-        checksum_arr = bytearray()
-        N = 10 # number of bytes allocated for checksum
-        checksum_val = sum(bytearray(data_array))
-        ones = N - int(len(str(checksum_val)))
-        checksum_arr.extend(bytes(checksum_val))
-        for i in range(ones):
-            checksum_arr.extend(bytes(1))
-        return checksum_arr
+        checksum_val = hashlib.md5()
+        checksum_val.update(bytearray(data_array))
+        return checksum_val.digest()
 
 
 if __name__ == "__main__":
-    # test out BogoReceiver
-    #rcvr = BogoReceiver()
     rcvr = OurReceiver()
     rcvr.receive()

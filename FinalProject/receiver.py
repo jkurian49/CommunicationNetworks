@@ -1,4 +1,6 @@
 # Written by S. Mevawala, modified by D. Gitzel
+# Jason Kurian, Rebecca Gartenberg, Sophie Jaro
+# We implemented RDT 3.0 (checksum, timeout, sequence numbers, ACKS) and handled duplicate packets
 
 import logging
 
